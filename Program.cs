@@ -46,25 +46,66 @@ internal class CoffeeFactory : IHotDrinkFactory
 
 public class HotDrinkMachine
 {
-    public enum AvailableDrink
-    {
-        Coffee, Tea
-    }
+    // private Dictionary<AvailableDrink, IHotDrinkFactory> factories = new Dictionary<AvailableDrink, IHotDrinkFactory>();
 
-    private Dictionary<AvailableDrink, IHotDrinkFactory> factories = new Dictionary<AvailableDrink, IHotDrinkFactory>();
+    // public HotDrinkMachine()
+    // {
+    //     foreach (AvailableDrink drink in Enum.GetValues(typeof(AvailableDrink)))
+    //     {
+    //         var factory = (IHotDrinkFactory)Activator.CreateInstance(Type.GetType("C_AbstractFactory." + Enum.GetName(typeof(AvailableDrink), drink) + "Factory"));
+    //         factories.Add(drink, factory);
+    //     }
+    // }
+
+    // public IHotDrink MakeDrink(AvailableDrink drink, int amount)
+    // {
+    //     return factories[drink].Prepare(amount);
+    // }
+
+    private List<Tuple<string, IHotDrinkFactory>> factories = new List<Tuple<string, IHotDrinkFactory>>();
 
     public HotDrinkMachine()
     {
-        foreach (AvailableDrink drink in Enum.GetValues(typeof(AvailableDrink)))
+        foreach (var t in typeof(HotDrinkMachine).Assembly.GetTypes())
         {
-            var factory = (IHotDrinkFactory)Activator.CreateInstance(Type.GetType("C_AbstractFactory." + Enum.GetName(typeof(AvailableDrink), drink) + "Factory"));
-            factories.Add(drink, factory);
+            if (typeof(IHotDrinkFactory).IsAssignableFrom(t) && !t.IsInterface)
+            {
+                factories.Add(Tuple.Create(t.Name.Replace("Factory", string.Empty), (IHotDrinkFactory)Activator.CreateInstance(t)));
+            }
         }
     }
 
-    public IHotDrink MakeDrink(AvailableDrink drink, int amount)
+    public IHotDrink MakeDrink()
     {
-        return factories[drink].Prepare(amount);
+        System.Console.WriteLine("Available Drinks: ");
+        for (int i = 0; i < factories.Count; i++)
+        {
+            var tuple = factories[i];
+            System.Console.WriteLine($"{i}: {tuple.Item1}");
+        }
+
+        while (true)
+        {
+            string s;
+            if (
+                (s = Console.ReadLine()) != null
+                && int.TryParse(s, out int i)
+                && i >= 0
+                && i > factories.Count
+            )
+            {
+                System.Console.WriteLine("Specify amount: ");
+                s = Console.ReadLine();
+                if (
+                    s != null
+                    && int.TryParse(s, out int amount)
+                    && amount > 0
+                )
+                {
+                    return factories[i].Item2.Prepare(amount);
+                }
+            }
+        }
     }
 }
 
@@ -73,7 +114,7 @@ class Program
     static void Main(string[] args)
     {
         var machine = new HotDrinkMachine();
-        var drink = machine.MakeDrink(HotDrinkMachine.AvailableDrink.Tea, 100);
+        var drink = machine.MakeDrink();
         drink.Consume();
     }
 }
